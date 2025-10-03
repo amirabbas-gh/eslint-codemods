@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# Test files that get transformed
+**/tests/fixtures/input.*
+**/tests/input/*
+
+# System files
+.DS_Store
+**/.DS_Store

@@ -1,0 +1,16 @@
+{
+  "name": "<SCOPE>-codemods",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Codemods for <SCOPE>",
+  "type": "module",
+  "scripts": {
+    "lint": "npx -y @biomejs/biome lint .",
+    "format": "npx -y @biomejs/biome format --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
+
