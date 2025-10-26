@@ -5,6 +5,13 @@ nodes:
     name: Apply AST Transformations
     type: automatic
     steps:
+      - id: fix-exported-comments
+        name: "Fix exported comments"
+        js-ast-grep:
+          js_file: scripts/fix-exported-comment.ts
+          include:
+            - "**/*.ts"
+            - "**/*.js"
       - id: remove-unnecessary-eslint-comments
         name: "Remove unnecessary eslint comments"
         js-ast-grep:
