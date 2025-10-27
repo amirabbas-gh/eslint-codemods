@@ -63,3 +63,12 @@ nodes:
             scan-eslintrc-json,
           ]
         run: scripts/move.sh
+      - id: convert-rule-format
+        name: "Convert rule format"
+        depends_on:
+          - move-eslintrc-files
+        js-ast-grep:
+          js_file: scripts/new-rule-format.ts
+          include:
+            - "**/*.ts"
+            - "**/*.js"
