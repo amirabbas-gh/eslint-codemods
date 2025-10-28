@@ -27,11 +27,31 @@ export default async function transform(root: SgRoot<JS>): Promise<string> {
 
   if (createRule) {
     let text = createRule.text();
+
+    const expressions = createRule.findAll({
+      rule: {
+        kind: "call_expression",
+        has: {
+          kind: "member_expression",
+          has: {
+            kind: "identifier",
+            regex: "context",
+            pattern: "$IDENTIFIER",
+          },
+        },
+      },
+    });
+    for (let expression of expressions) {
+      let identifier = expression.getMatch("IDENTIFIER");
+      if (!identifier) continue;
+      edits.push(identifier.replace("contextSourceCode"));
+    }
+
     let newText = `{
-        const sourceCode = context.sourceCode ?? context.getSourceCode();${text.substring(
+        const contextSourceCode = context.sourceCode ?? context.getSourceCode();${text.substring(
           1,
           text.length
-        )}}`;
+        )}`;
     edits.push(createRule.replace(newText));
   }
 
