@@ -63,10 +63,19 @@ nodes:
             scan-eslintrc-json,
           ]
         run: scripts/move.sh
+      - id: replace-context-method
+        name: "Replace context method"
+        depends_on:
+          - move-eslintrc-files
+        js-ast-grep:
+          js_file: scripts/replace-context-method.ts
+          include:
+            - "**/*.ts"
+            - "**/*.js"
       - id: convert-rule-format
         name: "Convert rule format"
         depends_on:
-          - move-eslintrc-files
+          - replace-context-method
         js-ast-grep:
           js_file: scripts/new-rule-format.ts
           include:
