@@ -88,6 +88,18 @@ export default async function transform(root: SgRoot<JS>): Promise<string> {
             `contextSourceCode.getCommentsBefore() + contextSourceCode.getCommentsInside() + contextSourceCode.getCommentsAfter()`
           )
         );
+      } else if (propertyText == "getAncestors" || propertyText == "getScope") {
+        newRootEdits.push(
+          expression.replace(
+            `contextSourceCode.${propertyText}(node) //TODO: new node param \n`
+          )
+        );
+      } else if (propertyText == "markVariableAsUsed") {
+        newRootEdits.push(
+          expression.replace(
+            `contextSourceCode.markVariableAsUsed(name, node) //TODO: new name, code params \n`
+          )
+        );
       }
 
       newRootEdits.push(identifier.replace("contextSourceCode"));
