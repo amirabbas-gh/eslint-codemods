@@ -63,30 +63,8 @@ nodes:
             scan-eslintrc-json,
           ]
         run: scripts/move.sh
-      - id: replace-current-statement
-        name: "Replace current statement"
+      - id: apply-custom-rules
+        name: "Apply custom rules"
         depends_on:
           - move-eslintrc-files
-        js-ast-grep:
-          js_file: scripts/replace-current-statement.ts
-          include:
-            - "**/*.ts"
-            - "**/*.js"
-      - id: replace-context-method
-        name: "Replace context method"
-        depends_on:
-          - replace-current-statement
-        js-ast-grep:
-          js_file: scripts/replace-context-method.ts
-          include:
-            - "**/*.ts"
-            - "**/*.js"
-      - id: convert-rule-format
-        name: "Convert rule format"
-        depends_on:
-          - replace-context-method
-        js-ast-grep:
-          js_file: scripts/new-rule-format.ts
-          include:
-            - "**/*.ts"
-            - "**/*.js"
+        run: scripts/custom-rules.sh
