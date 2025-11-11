@@ -25,7 +25,7 @@
 
 ---
 
-Official <FRAMEWORK_OR_SDK_OR_ORG> codemods to help users adopt new features and handle breaking changes with ease.
+Official eslint codemods to help users adopt new features and handle breaking changes with ease.
 
 Community contributions are welcome and appreciated! Check open issues for codemods to build, or open a new one if something’s missing. See the [contribution guide](./CONTRIBUTING.md) for details.
 
@@ -45,7 +45,7 @@ npx codemod@latest <codemod-name>
 For example:
 
 ```bash
-npx codemod@latest @nodejs/tmpDir-to-tmpdir
+npx codemod@latest @eslint/v8-to-v9
 ```
 
 ### From source
