@@ -408,9 +408,11 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
       }
     }
     // end no-constructor-return and no-sequences section
-    // start "eslint:recommended" and "eslint:all"
+    // start "eslint:recommended", "eslint:all", "airbnb", and "prettier"
     let eslintRecommended = false;
     let eslintAll = false;
+    let hasAirbnb = false;
+    let hasPrettier = false;
     let extendsRule = sector.find({
       rule: {
         kind: "pair",
@@ -444,8 +446,27 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
         if (extendsStrings.includes("eslint:all")) {
           eslintAll = true;
         }
+        if (extendsStrings.includes("airbnb") || extendsStrings.includes("eslint-config-airbnb")) {
+          hasAirbnb = true;
+        }
+        if (
+          extendsStrings.includes("prettier") ||
+          extendsStrings.includes("eslint-config-prettier")
+        ) {
+          hasPrettier = true;
+        }
         sectorData.extends = isArrayRule
-          .filter((extend) => !['"eslint:recommended"', '"eslint:all"'].includes(extend.text()))
+          .filter(
+            (extend) =>
+              ![
+                '"eslint:recommended"',
+                '"eslint:all"',
+                '"airbnb"',
+                '"eslint-config-airbnb"',
+                '"prettier"',
+                '"eslint-config-prettier"',
+              ].includes(extend.text())
+          )
           .map((extend) => `${extend.text()}`);
       } else {
         let extendsExecute = extendsRule.find({
@@ -461,24 +482,87 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
           eslintRecommended = true;
         } else if (extendsText == "eslint:all") {
           eslintAll = true;
+        } else if (extendsText == "airbnb" || extendsText == "eslint-config-airbnb") {
+          hasAirbnb = true;
+        } else if (extendsText == "prettier" || extendsText == "eslint-config-prettier") {
+          hasPrettier = true;
         } else {
           sectorData.extends = [`"${extendsText}"`];
         }
       }
     }
-    if (eslintRecommended || eslintAll) {
+    if (eslintRecommended || eslintAll || hasAirbnb || hasPrettier) {
       sectorData.extends = sectorData.extends.filter(
-        (extend) => !['"eslint:recommended"', '"eslint:all"'].includes(extend)
+        (extend) =>
+          ![
+            '"eslint:recommended"',
+            '"eslint:all"',
+            '"airbnb"',
+            '"eslint-config-airbnb"',
+            '"prettier"',
+            '"eslint-config-prettier"',
+          ].includes(extend)
       );
-      imports.push('import js from "@eslint/js";');
       if (eslintRecommended) {
+        imports.push('import js from "@eslint/js";');
         sectorData.extends.push("js.configs.recommended");
       }
       if (eslintAll) {
+        if (!imports.includes('import js from "@eslint/js";')) {
+          imports.push('import js from "@eslint/js";');
+        }
         sectorData.extends.push("js.configs.all");
       }
+      if (hasAirbnb) {
+        imports.push('import airbnb from "eslint-config-airbnb";');
+        sectorData.extends.push("airbnb");
+      }
+      if (hasPrettier) {
+        imports.push('import prettier from "eslint-config-prettier";');
+        sectorData.extends.push("prettier");
+      }
     }
-    // end "eslint:recommended" and "eslint:all"
+    // end "eslint:recommended", "eslint:all", "airbnb", and "prettier"
+    // start handling plugin configs (e.g., "plugin:testing-library/react")
+    const pluginConfigPattern = /^plugin:([^/]+)\/(.+)$/;
+    const processedExtends: string[] = [];
+
+    for (const extend of sectorData.extends) {
+      // Check if this is a quoted string (not already processed reference)
+      const isQuoted = /^["'].*["']$/.test(extend);
+
+      if (isQuoted) {
+        // Remove quotes from the extend string
+        const extendValue = extend.replace(/^["']|["']$/g, "");
+        const match = extendValue.match(pluginConfigPattern);
+
+        if (match && match[1] && match[2]) {
+          const pluginName = match[1];
+          const configName = match[2];
+          // Convert plugin name to import name (e.g., "testing-library" -> "testingLibrary")
+          const importName = pluginName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+          const packageName = `eslint-plugin-${pluginName}`;
+
+          // Add import if not already present
+          const importStatement = `import ${importName} from "${packageName}";`;
+          if (!imports.includes(importStatement)) {
+            imports.push(importStatement);
+          }
+
+          // Add reference to the config
+          processedExtends.push(`${importName}.configs["${configName}"]`);
+        } else {
+          // Keep non-plugin quoted extends as-is
+          processedExtends.push(extend);
+        }
+      } else {
+        // Keep non-quoted extends (already processed references) as-is
+        processedExtends.push(extend);
+      }
+    }
+
+    sectorData.extends = processedExtends;
+    // end handling plugin configs
     // start execute no-unused-vars
     let noUnusedVars = {
       type: "nothing",

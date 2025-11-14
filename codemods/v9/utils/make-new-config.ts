@@ -82,7 +82,21 @@ const makeNewConfig = (sectors: SectorData[], imports: string[]): string => {
     }
 
     if (Object.keys(sector.languageOptions).length > 0) {
-      const formattedLangOpts = formatValue(sector.languageOptions, 2);
+      const langOpts = { ...sector.languageOptions };
+      if (langOpts.ecmaVersion !== undefined || langOpts.ecmaFeatures !== undefined) {
+        if (!langOpts.parserOptions) {
+          langOpts.parserOptions = {};
+        }
+        if (langOpts.ecmaVersion !== undefined) {
+          langOpts.parserOptions.ecmaVersion = langOpts.ecmaVersion;
+          delete langOpts.ecmaVersion;
+        }
+        if (langOpts.ecmaFeatures !== undefined) {
+          langOpts.parserOptions.ecmaFeatures = langOpts.ecmaFeatures;
+          delete langOpts.ecmaFeatures;
+        }
+      }
+      const formattedLangOpts = formatValue(langOpts, 2);
       parts.push(`    languageOptions: ${formattedLangOpts},`);
     }
 
