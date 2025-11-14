@@ -2,6 +2,7 @@ import { type SgRoot, parse } from "codemod:ast-grep";
 import type JSON from "codemod:ast-grep/langs/json";
 import { type SgNode } from "codemod:ast-grep";
 import { getStepOutput } from "codemod:workflow";
+import makeNewConfig from "../utils/make-new-config.ts";
 
 async function transform(root: SgRoot<JSON>): Promise<string> {
   const rootNode = root.root();
@@ -37,7 +38,7 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
     },
   });
 
-  let imports = ['import {defineConfig} from "eslint/config";'];
+  let imports = ['import { defineConfig } from "eslint/config";'];
 
   let sectors = [];
 
@@ -225,7 +226,7 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
     ) {
       sectorData.requireJsdoc.exists = true;
       sectorData.requireJsdoc.settings = jsDocs.options;
-      imports.push("import {jsdoc} from 'eslint-plugin-jsdoc';");
+      imports.push('import { jsdoc } from "eslint-plugin-jsdoc";');
     }
     // end jsDocs section
     // start no-constructor-return and no-sequences section
@@ -1095,33 +1096,7 @@ async function transform(root: SgRoot<JSON>): Promise<string> {
     sectors.push(sectorData);
   }
 
-  let requireJsdocSettings = sectors.find((sector) => sector.requireJsdoc.exists)?.requireJsdoc
-    .settings;
-  let newEslintConfig = `${imports.join("\n")}\nexport default defineConfig(${
-    requireJsdocSettings
-      ? `jsdoc({
-    config: 'flat/recommended',
-    settings: {
-        // TODO: Migrate settings manually
-        ${Object.entries(requireJsdocSettings)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(",\n")}
-    },
-  }),\n`
-      : ``
-  }${sectors.map((sector) => {
-    const rulesStr = Object.entries(sector.rules)
-      .map(([key, value]) => `\n${key}:${value}`)
-      .join(", ");
-    const extendsStr = sector.extends.join(",");
-    let languageOptions = JSON.stringify(sector.languageOptions);
-    languageOptions = languageOptions.replace(/"(\.\.\.[^"]+)":\s*(?:["']'?"?"|\{\})?,?/g, "$1,");
-    return `\n{languageOptions: ${languageOptions}, ${
-      sector.extends.length ? `extends: [${extendsStr}],\n` : ``
-    } rules: {${rulesStr}}\n, ${sector.files ? `files: ${sector.files}\n` : ``}}`;
-  })})`;
-
-  const newSource = newEslintConfig;
+  const newSource = makeNewConfig(sectors, imports);
   return newSource;
 }
 
