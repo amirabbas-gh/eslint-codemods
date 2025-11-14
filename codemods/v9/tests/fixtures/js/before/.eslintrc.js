@@ -56,15 +56,9 @@ module.exports = {
       },
     ],
 
-    // ========================================================================================
-    // ✅ 4. no-constructor-return - schema در v9 سخت‌تر شده
-    // ========================================================================================
     "no-constructor-return": "error",
     "no-constructor-return": ["error"],
 
-    // ========================================================================================
-    // ✅ 5. no-sequences - schema در v9 سخت‌تر شده
-    // ========================================================================================
     "no-sequences": [
       "error",
       {
@@ -79,23 +73,23 @@ module.exports = {
         paths: [
           {
             name: "lodash",
-            message: "لطفاً از lodash-es برای tree-shaking بهتر استفاده کنید.",
+            message: "Please use lodash-es for better tree-shaking.",
           },
           {
             name: "moment",
             message:
-              "لطفاً از date-fns یا dayjs استفاده کنید - moment خیلی سنگینه.",
+              "Please use date-fns or dayjs instead - moment is quite heavy.",
           },
           {
             name: "axios",
             importNames: ["default"],
-            message: "لطفاً از fetch API استفاده کنید.",
+            message: "Please use fetch API instead.",
           },
         ],
         patterns: [
           {
             group: ["../*"],
-            message: "از relative imports والد استفاده نکنید.",
+            message: "Do not use parent relative imports.",
           },
         ],
       },
@@ -127,15 +121,10 @@ module.exports = {
         ignoreDestructuring: false,
         ignoreImports: false,
         ignoreGlobals: false,
-        allow: ["^UNSAFE_", "^DEPRECATED_", "api_key", "user_id"], // فرمت array
+        allow: ["^UNSAFE_", "^DEPRECATED_", "api_key", "user_id"],
       },
     ],
 
-    // ========================================================================================
-    // قوانین اضافی مفید برای v8
-    // ========================================================================================
-
-    // Console و Debugging
     "no-console": ["warn", { allow: ["warn", "error", "info"] }],
     "no-debugger": "error",
     "no-alert": "warn",

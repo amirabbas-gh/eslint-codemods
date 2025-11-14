@@ -34,7 +34,7 @@ export default defineConfig(
           ignoreDestructuring: false,
           ignoreImports: false,
           ignoreGlobals: false,
-          allow: ["^UNSAFE_", "^DEPRECATED_", "api_key", "user_id"], // فرمت array
+          allow: ["^UNSAFE_", "^DEPRECATED_", "api_key", "user_id"],
         },
       ],
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
@@ -120,23 +120,23 @@ export default defineConfig(
             {
               name: "lodash",
               message:
-                "لطفاً از lodash-es برای tree-shaking بهتر استفاده کنید.",
+                "Please use lodash-es for better tree-shaking.",
             },
             {
               name: "moment",
               message:
-                "لطفاً از date-fns یا dayjs استفاده کنید - moment خیلی سنگینه.",
+                "Please use date-fns or dayjs instead - moment is quite heavy.",
             },
             {
               name: "axios",
               importNames: ["default"],
-              message: "لطفاً از fetch API استفاده کنید.",
+              message: "Please use fetch API instead.",
             },
           ],
           patterns: [
             {
               group: ["../*"],
-              message: "از relative imports والد استفاده نکنید.",
+              message: "Do not use parent relative imports.",
             },
           ],
         },
