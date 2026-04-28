@@ -8,12 +8,37 @@ type LanguageOptionsKnownValue =
   | Record<string, string | number | boolean>;
 
 /**
- * Emit a JavaScript object literal property key: valid IdentifierNames stay unquoted;
- * keys starting with `@`, containing `-`, or otherwise invalid as identifiers use JSON quoting.
+ * Emit `globals` package spreads so nested keys that are not valid identifiers
+ * (e.g. `shared-node-browser`, `node/base`) use bracket notation.
  */
+export const formatGlobalsSpreadExpression = (key: string): string => {
+  const prefix = "...globals.";
+  if (!key.startsWith(prefix)) {
+    return key;
+  }
+  const pathPart = key.slice(prefix.length);
+  if (!pathPart) {
+    return key;
+  }
+  const segments = pathPart.split(".").filter((s) => s.length > 0);
+  if (segments.length === 0) {
+    return key;
+  }
+  let result = "...globals";
+  for (const seg of segments) {
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(seg)) {
+      result += `.${seg}`;
+    } else {
+      result += `[${JSON.stringify(seg)}]`;
+    }
+  }
+  return result;
+};
+
+/** Valid IdentifierNames stay unquoted; invalid keys use JSON quoting; globals spreads use bracket segments when needed. */
 export const formatJsObjectPropertyKey = (key: string): string => {
   if (key.startsWith("...")) {
-    return key;
+    return key.startsWith("...globals.") ? formatGlobalsSpreadExpression(key) : key;
   }
   // Legacy paths store JSON-style keys with quote delimiters already in the string.
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
@@ -77,7 +102,9 @@ const formatValue = (value: unknown, indent: number): string => {
     if (entries.length === 0) return "{}";
     const props = entries.map(([key, val]) => {
       if (key.startsWith("...")) {
-        return `${nextIndentStr}${key}`;
+        const spread =
+          key.startsWith("...globals.") ? formatGlobalsSpreadExpression(key) : key;
+        return `${nextIndentStr}${spread}`;
       }
       const formattedKey = formatJsObjectPropertyKey(key);
       return `${nextIndentStr}${formattedKey}: ${formatValue(val, indent + 1)}`;
