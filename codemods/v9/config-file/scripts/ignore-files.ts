@@ -23,7 +23,11 @@ async function transform(root: SgRoot<JS>): Promise<string | null> {
 
   setStepOutput(`ignoreFiles-${directory}`, JSON.stringify(ignoreFiles, null, 2));
 
-  root.rename("../deleted-eslintignore-backup.txt");
+  const currentWorkingDirectory = process.cwd();
+  const fileName = root.filename();
+  const fileDirectory = path.dirname(fileName);
+  const relativePath = fileDirectory != currentWorkingDirectory ? "../" : "";
+  root.rename(`${relativePath}deleted-eslintignore-backup.txt`);
 
   return null;
 }
