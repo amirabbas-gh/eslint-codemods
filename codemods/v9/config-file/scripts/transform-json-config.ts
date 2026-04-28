@@ -42,7 +42,7 @@ async function transform(root: SgRoot<JSON>): Promise<string | null> {
   let sectors: SectorData[] = [];
 
   for (let sector of rulesSectorsRule) {
-    let sectorData = {
+    let sectorData: SectorData = {
       rules: {} as Record<string, string>,
       extends: [] as string[], // Preserved extends exactly as they were
       languageOptions: {} as LanguageOptions,
@@ -600,7 +600,7 @@ async function transform(root: SgRoot<JSON>): Promise<string | null> {
           // Preserve the plugin exactly as it was
           const pluginImport = makePluginImport(pluginName);
           imports.push(`import ${pluginImport.identifier} from "${pluginImport.packageName}";`);
-          sectorData.plugins.push({ key: pluginName, identifier: pluginImport.identifier });
+          sectorData.plugins?.push({ key: pluginName, identifier: pluginImport.identifier });
         }
       } else {
         // Plugins might be an array
@@ -627,7 +627,7 @@ async function transform(root: SgRoot<JSON>): Promise<string | null> {
             // For array plugins, use the plugin name as both key and value
             const pluginImport = makePluginImport(pluginText);
             imports.push(`import ${pluginImport.identifier} from "${pluginImport.packageName}";`);
-            sectorData.plugins.push({ key: pluginText, identifier: pluginImport.identifier });
+            sectorData.plugins?.push({ key: pluginText, identifier: pluginImport.identifier });
           }
         }
       }
@@ -1315,6 +1315,30 @@ async function transform(root: SgRoot<JSON>): Promise<string | null> {
       sectorData.linterOptions = linterOptions;
     }
     // end linterOptions detection
+
+    // start execution ignorePatterns: {"ignorePatterns": ["test", "m"]}
+    const ignorePatternsRule = sector.findAll({
+      rule: {
+        kind: "string",
+        inside: {
+          kind: "array",
+          inside: {
+            kind: "pair",
+            has: {
+              kind: "string",
+              has: {
+                kind: "string_content",
+                regex: "ignorePatterns",
+              },
+            },
+          },
+        },
+      },
+    });
+    if (ignorePatternsRule.length) {
+      sectorData.ignorePatterns = ignorePatternsRule.map((rule) => rule.text().trim());
+    }
+    // end execution "ignorePatterns": {ignorePatterns: ["test", "m"]}
 
     sectors.push(sectorData);
   }

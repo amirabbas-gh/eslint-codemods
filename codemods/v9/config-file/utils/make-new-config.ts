@@ -41,7 +41,8 @@ export type SectorData = {
     settings: Record<string, string>;
   };
   extendsTodoComments?: string[]; // TODO comments for extends
-  linterOptions?: Record<string, string>; // Values already formatted for emission (e.g. `true`, `"warn"`)
+  linterOptions?: Record<string, string>; // Values already formatted for emission (e.g. `true`, `"warn"`),
+  ignorePatterns?: string[]; // ignorePatterns: ["test", "m"]
 };
 
 const formatValue = (value: unknown, indent: number): string => {
@@ -91,9 +92,11 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
 
   const parts: string[] = [];
 
-  const ignoreFiles = JSON.parse(
+  let ignoreFiles = JSON.parse(
     getStepOutput("scan-ignore-files", `ignoreFiles-${directory}`) || "[]"
   ) as unknown as string[];
+
+  ignoreFiles = ignoreFiles.concat(...sectors.flatMap((sector) => sector.ignorePatterns || []));
 
   if (ignoreFiles.length) {
     imports.push(`import { defineConfig, globalIgnores } from "@eslint/config-helpers";`);
@@ -219,16 +222,7 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
   parts.push("export default defineConfig([");
 
   if (ignoreFiles.length) {
-    if (ignoreFiles.length === 1) {
-      parts.push(`  globalIgnores(["${ignoreFiles[0]}"]),`);
-    } else {
-      parts.push("  globalIgnores([");
-      ignoreFiles.forEach((file, index) => {
-        const comma = index < ignoreFiles.length - 1 ? "," : "";
-        parts.push(`    "${file}"${comma}`);
-      });
-      parts.push("  ]),");
-    }
+    parts.push(`  globalIgnores([${ignoreFiles.map((file) => file).join(",")}]),`);
   }
 
   if (requireJsdocSettings) {

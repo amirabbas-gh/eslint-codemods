@@ -19,7 +19,8 @@ async function transform(root: SgRoot<JS>): Promise<string | null> {
 
   ignoreFiles = ignoreFiles
     .filter((file) => !file.startsWith("#"))
-    .filter((file, index, self) => self.indexOf(file) === index);
+    .filter((file, index, self) => self.indexOf(file) === index)
+    .map((file) => `"${file}"`);
 
   setStepOutput(`ignoreFiles-${directory}`, JSON.stringify(ignoreFiles, null, 2));
 
