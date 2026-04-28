@@ -35,6 +35,8 @@ export type SectorData = {
   extends: string[]; // Preserved extends exactly as they were (as strings)
   languageOptions: Record<string, unknown>;
   files: string;
+  /** Legacy `excludedFiles` globs, emitted as flat-config `ignores`. */
+  excludedFiles: string;
   plugins?: Array<{ key: string; identifier: string }>;
   requireJsdoc: {
     exists: boolean;
@@ -247,16 +249,19 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
     const todoComments = sector.extendsTodoComments || [];
 
     // Check if we have any content for the sector object
-    const hasFiles = !!sector.files;
+    const hasFiles = !!sector.files && sector.files !== "[]";
     const hasLanguageOptions = Object.keys(sector.languageOptions).length > 0;
     const hasRules = Object.keys(sector.rules).length > 0;
     const hasPlugins = sector.plugins && sector.plugins.length > 0;
     const hasExtends = preservedExtends.length > 0;
     const hasLinterOptions = !!sector.linterOptions && Object.keys(sector.linterOptions).length > 0;
+    const hasExcludedFiles =
+      !!sector.excludedFiles && sector.excludedFiles !== "[]";
 
     // Create an object if we have any properties (files, rules, plugins, languageOptions, extends, TODO comments)
     if (
       hasFiles ||
+      hasExcludedFiles ||
       hasLanguageOptions ||
       hasRules ||
       hasPlugins ||
@@ -266,8 +271,12 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
     ) {
       parts.push("  {");
 
-      if (sector.files) {
+      if (hasFiles) {
         parts.push(`    files: ${sector.files},`);
+      }
+
+      if (hasExcludedFiles) {
+        parts.push(`    ignores: ${sector.excludedFiles},`);
       }
 
       // Preserved extends - keep in extends property exactly as they were

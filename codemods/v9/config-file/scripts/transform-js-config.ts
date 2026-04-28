@@ -69,6 +69,7 @@ async function transform(root: SgRoot<JS>): Promise<string | null> {
       extends: [] as string[], // Preserved extends exactly as they were
       languageOptions: {} as LanguageOptions,
       files: String() as string,
+      excludedFiles: String() as string,
       plugins: [] as Array<{ key: string; identifier: string }>,
       requireJsdoc: {
         exists: false,
@@ -1367,37 +1368,100 @@ async function transform(root: SgRoot<JS>): Promise<string | null> {
     // end detecting env
 
     // start files detection
-    let files = "";
-    const filesValueDetection = sector.find({
+    const filesValueDetection = sector.findAll({
       rule: {
-        kind: "pair",
-        pattern: "$PAIR",
-        has: {
-          any: [
-            {
-              kind: "property_identifier",
-              regex: "files",
-              pattern: "$IDENTIFIER",
-            },
-            {
-              kind: "string",
-              has: {
-                kind: "string_fragment",
-                regex: "files",
+        any: [
+          {
+            inside: {
+              kind: "array",
+              inside: {
+                kind: "pair",
+                has: {
+                  kind: "property_identifier",
+                  regex: "^files$",
+                },
               },
-              pattern: "$IDENTIFIER",
             },
-          ],
-        },
+            any: [
+              {
+                kind: "string",
+              },
+              {
+                kind: "identifier",
+              },
+            ],
+          },
+          {
+            kind: "string",
+            nthChild: 2,
+            inside: {
+              kind: "pair",
+              has: {
+                kind: "property_identifier",
+                regex: "^files$",
+              },
+            },
+          },
+        ],
       },
     });
-    if (filesValueDetection) {
-      let filesIdentifier = filesValueDetection.getMatch("IDENTIFIER")?.text();
-      let value = filesValueDetection.text().trim().replace(`${filesIdentifier}:`, "").trim();
-      files = value;
+    if (filesValueDetection.length) {
+      sectorData.files = `[${filesValueDetection
+        .map((value) => value.text() as string)
+        .filter((value) => value !== "")
+        .join(", ")}]`;
+    } else {
+      sectorData.files = "[]";
     }
-    sectorData.files = files as string;
     // end files detection
+
+    // start excludedFiles detection (flat config: ignores)
+    const excludedFilesValueDetection = sector.findAll({
+      rule: {
+        any: [
+          {
+            inside: {
+              kind: "array",
+              inside: {
+                kind: "pair",
+                has: {
+                  kind: "property_identifier",
+                  regex: "^excludedFiles$",
+                },
+              },
+            },
+            any: [
+              {
+                kind: "string",
+              },
+              {
+                kind: "identifier",
+              },
+            ],
+          },
+          {
+            kind: "string",
+            nthChild: 2,
+            inside: {
+              kind: "pair",
+              has: {
+                kind: "property_identifier",
+                regex: "^excludedFiles$",
+              },
+            },
+          },
+        ],
+      },
+    });
+    if (excludedFilesValueDetection.length) {
+      sectorData.excludedFiles = `[${excludedFilesValueDetection
+        .map((value) => value.text() as string)
+        .filter((value) => value !== "")
+        .join(", ")}]`;
+    } else {
+      sectorData.excludedFiles = "[]";
+    }
+    // end excludedFiles detection
 
     // start linterOptions detection (noInlineConfig, reportUnusedDisableDirectives)
     const linterOptions: Record<string, string> = {};
