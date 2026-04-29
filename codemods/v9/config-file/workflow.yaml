@@ -84,7 +84,6 @@ nodes:
           js_file: scripts/transform-eslintrc-config.ts
           include:
             - "**/*.eslintrc.json"
-            - "**/*.eslintrc"
       - id: scan-yaml-eslintrc-files
         name: "Scan .eslintrc.yaml and .eslintrc.yml"
         depends_on:
