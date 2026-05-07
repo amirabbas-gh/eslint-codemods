@@ -22,17 +22,17 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
     },
   });
 
-  let isJsdoccommentExists = false;
+  let doesJsDocCommentExist = false;
 
   for (let fileJsdoc of fileJsdocs) {
-    isJsdoccommentExists = true;
+    doesJsDocCommentExist = true;
     edits.push(fileJsdoc.replace(""));
   }
 
-  const release = acquireLock("isJsdoccommentExists");
+  const release = acquireLock("doesJsDocCommentExist");
   try {
-    const prev = getState<boolean>("isJsdoccommentExists") ?? false;
-    setState("isJsdoccommentExists", prev || isJsdoccommentExists);
+    const prev = getState<boolean>("doesJsDocCommentExist") ?? false;
+    setState("doesJsDocCommentExist", prev || doesJsDocCommentExist);
   } finally {
     release();
   }

@@ -281,7 +281,7 @@ async function transform(root: SgRoot<JSON>): Promise<string | null> {
     delete sectorData.rules['"valid-jsdoc"'];
     if (
       (jsDocs.type != "nothing" && jsDocs.type != "off") ||
-      getState<boolean>("isJsdoccommentExists") === true
+      getState<boolean>("doesJsDocCommentExist") === true
     ) {
       sectorData.requireJsdoc.exists = true;
       sectorData.requireJsdoc.settings = jsDocs.options;
