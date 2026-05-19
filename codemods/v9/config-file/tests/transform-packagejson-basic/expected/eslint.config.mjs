@@ -7,8 +7,7 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.node
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       "no-console": "warn"

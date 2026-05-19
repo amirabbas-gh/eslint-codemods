@@ -21,8 +21,7 @@ export default defineConfig([
     languageOptions: {
       globals: {
         ...globals.node
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       "no-console": "warn",

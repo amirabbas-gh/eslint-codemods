@@ -24,9 +24,5 @@ export default defineConfig([
       "jsx-a11y": fixupPluginRules(JsxA11y),
       "@tanstack/query": fixupPluginRules(TanstackQuery)
     },
-    languageOptions: {
-      globals: {},
-      parserOptions: {}
-    },
   }
 ]);

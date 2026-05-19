@@ -11,9 +11,13 @@ import { parse } from "codemod:ast-grep";
 async function transform(root: SgRoot<YAML | JSON | JS>): Promise<string | null> {
   const text = root.root().text();
   const fileName = root.filename();
-  const fileExtension = path.basename(fileName).split(".").pop()?.toLowerCase();
+  const basename = path.basename(fileName);
+  const fileExtension = basename.split(".").pop()?.toLowerCase();
 
-  root.rename("eslint.config.mjs");
+  const isStandardEslintrc = /\.eslintrc\.(js|mjs|cjs|json|yaml|yml)$/.test(basename);
+  if (isStandardEslintrc) {
+    root.rename("eslint.config.mjs");
+  }
 
   if (fileExtension === "js" || fileExtension === "cjs" || fileExtension === "mjs") {
     return jsTransform(root as unknown as SgRoot<JS>);

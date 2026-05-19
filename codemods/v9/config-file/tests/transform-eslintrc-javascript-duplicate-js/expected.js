@@ -8,18 +8,10 @@ export default defineConfig([
     plugins: {
       import: fixupPluginRules(Import)
     },
-    languageOptions: {
-      globals: {},
-      parserOptions: {}
-    },
   },
   {
     plugins: {
       "react-hooks": fixupPluginRules(ReactHooks)
-    },
-    languageOptions: {
-      globals: {},
-      parserOptions: {}
     },
   }
 ]);

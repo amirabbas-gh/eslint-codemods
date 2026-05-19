@@ -43,11 +43,11 @@ export default defineConfig([
         ...globals.node,
         ...globals.es6
       },
+      sourceType: "module",
+      parser: typescriptParser,
       parserOptions: {
         ecmaVersion: 2020
-      },
-      sourceType: "module",
-      parser: typescriptParser
+      }
     },
     linterOptions: {
       noInlineConfig: true,
@@ -110,8 +110,6 @@ export default defineConfig([
     files: ["./packages/client/src/runtime/core/types/exported/*.ts"],
     ignores: ["index.ts"],
     languageOptions: {
-      globals: {},
-      parserOptions: {},
       parser: typescriptParser
     },
     rules: {
@@ -122,8 +120,6 @@ export default defineConfig([
   {
     files: ["./packages/client/src/runtime/core/types/exported/index.ts"],
     languageOptions: {
-      globals: {},
-      parserOptions: {},
       parser: typescriptParser
     },
     rules: {

@@ -34,10 +34,10 @@ export default defineConfig([
         ...globals.es2021,
         ...globals.node
       },
+      sourceType: "module",
       parserOptions: {
         ecmaVersion: "latest"
-      },
-      sourceType: "module"
+      }
     },
     linterOptions: {
       noInlineConfig: true,
@@ -60,18 +60,13 @@ export default defineConfig([
       ember: fixupPluginRules(Ember),
       node: fixupPluginRules(Node)
     },
-    languageOptions: {
-      globals: {},
-      parserOptions: {}
-    },
   },
   {
     files: ["*.test.js", "*.spec.js"],
     languageOptions: {
       globals: {
         ...globals.jest
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       "no-console": "off"

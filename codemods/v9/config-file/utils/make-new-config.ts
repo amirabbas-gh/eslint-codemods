@@ -275,7 +275,25 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
 
     // Check if we have any content for the sector object
     const hasFiles = !!sector.files && sector.files !== "[]";
-    const hasLanguageOptions = Object.keys(sector.languageOptions).length > 0;
+
+    // Compute a cleaned copy of languageOptions — omit sub-objects that are empty
+    // so that a sector with only rules doesn't emit a spurious `languageOptions: { globals: {}, parserOptions: {} }`.
+    const cleanedLangOpts = { ...sector.languageOptions };
+    if (
+      cleanedLangOpts.globals &&
+      typeof cleanedLangOpts.globals === "object" &&
+      Object.keys(cleanedLangOpts.globals).length === 0
+    ) {
+      delete cleanedLangOpts.globals;
+    }
+    if (
+      cleanedLangOpts.parserOptions &&
+      typeof cleanedLangOpts.parserOptions === "object" &&
+      Object.keys(cleanedLangOpts.parserOptions as Record<string, unknown>).length === 0
+    ) {
+      delete cleanedLangOpts.parserOptions;
+    }
+    const hasLanguageOptions = Object.keys(cleanedLangOpts).length > 0;
     const hasRules = Object.keys(sector.rules).length > 0;
     const hasPlugins = sector.plugins && sector.plugins.length > 0;
     const hasExtends = preservedExtends.length > 0;
@@ -351,7 +369,7 @@ const makeNewConfig = (sectors: SectorData[], imports: string[], directory: stri
       }
 
       if (hasLanguageOptions) {
-        const langOpts = { ...sector.languageOptions };
+        const langOpts = cleanedLangOpts;
 
         // Clean globals if they exist (remove whitespace from keys)
         if (langOpts.globals && typeof langOpts.globals === "object") {

@@ -44,10 +44,10 @@ export default defineConfig([
         ...globals.es2021,
         ...globals.node
       },
+      sourceType: "module",
       parserOptions: {
         ecmaVersion: "latest"
-      },
-      sourceType: "module"
+      }
     },
     linterOptions: {
       noInlineConfig: true,
@@ -137,8 +137,7 @@ export default defineConfig([
       globals: {
         ...globals.jest,
         ...globals.mocha
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       "no-console": "off",
@@ -150,8 +149,7 @@ export default defineConfig([
     languageOptions: {
       globals: {
         ...globals.node
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       "no-console": "off"
@@ -159,10 +157,6 @@ export default defineConfig([
   },
   {
     files: ["scripts/**/*.js"],
-    languageOptions: {
-      globals: {},
-      parserOptions: {}
-    },
     rules: {
       "no-console": "off",
       "no-process-exit": "off"

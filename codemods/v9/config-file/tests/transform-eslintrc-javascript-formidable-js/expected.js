@@ -29,8 +29,7 @@ export default defineConfig([
         ...globals.jest,
         ...globals.node,
         ...globals.commonjs
-      },
-      parserOptions: {}
+      }
     },
     rules: {
       strict: 'off',
