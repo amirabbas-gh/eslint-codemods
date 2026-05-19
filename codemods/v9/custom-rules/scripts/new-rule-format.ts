@@ -106,6 +106,18 @@ function getCommonJSFuncSelector(): RuleConfig<JS> {
   };
 }
 
+/** Returns true when the first argument of a call expression is a function/arrow. */
+function isFirstArgFunction(callExpr: SgNode<JS>): boolean {
+  const argsNode = callExpr.find({ rule: { kind: "arguments" } });
+  if (!argsNode) return false;
+  const args = argsNode
+    .children()
+    .filter((c) => c.kind() !== "(" && c.kind() !== ")" && c.kind() !== ",");
+  if (args.length === 0) return false;
+  const firstArg = args[0];
+  return firstArg?.kind() === "function_expression" || firstArg?.kind() === "arrow_function";
+}
+
 function getESMFuncSelector(): RuleConfig<JS> {
   return {
     rule: {
@@ -318,7 +330,11 @@ function findCommonJSWrappedCallAssignment(root: SgRoot<JS>): SgNode<JS> | null 
   });
   for (const assignment of assignments) {
     const rhs = assignment.getMatch("FUNC");
-    if (rhs?.kind() === "call_expression" && isEslintRule(root, assignment)) {
+    if (
+      rhs?.kind() === "call_expression" &&
+      isFirstArgFunction(rhs) &&
+      isEslintRule(root, assignment)
+    ) {
       return assignment;
     }
   }
@@ -336,16 +352,61 @@ function findESMWrappedCallExport(root: SgRoot<JS>): SgNode<JS> | null {
   });
   for (const stmt of stmts) {
     const rhs = stmt.getMatch("FUNC");
-    if (rhs?.kind() === "call_expression" && isEslintRule(root, stmt)) {
+    if (rhs?.kind() === "call_expression" && isFirstArgFunction(rhs) && isEslintRule(root, stmt)) {
       return stmt;
     }
   }
   return null;
 }
 
+/**
+ * Detects `function rule(context) { … }  module.exports = rule;` — a function
+ * declared separately and then assigned to module.exports.  When found we
+ * inline the function declaration as the `create` value so that downstream
+ * transforms (replace-context-method) can still inspect its body.
+ */
+function findIndirectCommonJSExport(root: SgRoot<JS>): {
+  assignmentNode: SgNode<JS>;
+  funcDecl: SgNode<JS>;
+  contextName: string;
+} | null {
+  const rootNode = root.root();
+
+  const assignments = rootNode.findAll({
+    rule: {
+      kind: "assignment_expression",
+      pattern: "module.exports = $FUNC",
+    },
+  });
+
+  for (const assignment of assignments) {
+    const rhs = assignment.getMatch("FUNC");
+    if (!rhs || rhs.kind() !== "identifier") continue;
+
+    const funcName = rhs.text();
+
+    // Look for `function rule(context) { … }`
+    const funcDecl = rootNode.find({
+      rule: {
+        kind: "function_declaration",
+        has: { kind: "identifier", regex: `^${funcName}$` },
+      },
+    });
+
+    if (funcDecl && isEslintRule(root, funcDecl)) {
+      const formalParams = funcDecl.find({ rule: { kind: "formal_parameters" } });
+      const firstParam = formalParams?.find({ rule: { kind: "identifier" } });
+      const contextName = firstParam?.text() || "context";
+      return { assignmentNode: assignment, funcDecl, contextName };
+    }
+  }
+
+  return null;
+}
+
 function getOldFormatRuleDefinition(
   root: SgRoot<JS>
-): { node: SgNode<JS>; style: ExportStyle } | null {
+): { node: SgNode<JS>; style: ExportStyle; indirectFuncDecl?: SgNode<JS>; indirectContextName?: string } | null {
   const rootNode = root.root();
 
   const commonJSNode = rootNode.find(getCommonJSRuleSelector());
@@ -366,6 +427,16 @@ function getOldFormatRuleDefinition(
   const esmWrappedCall = findESMWrappedCallExport(root);
   if (esmWrappedCall) {
     return { node: esmWrappedCall, style: "esm" };
+  }
+
+  const indirectExport = findIndirectCommonJSExport(root);
+  if (indirectExport) {
+    return {
+      node: indirectExport.assignmentNode,
+      style: "commonjs",
+      indirectFuncDecl: indirectExport.funcDecl,
+      indirectContextName: indirectExport.contextName,
+    };
   }
 
   return null;
@@ -577,11 +648,17 @@ async function transform(root: SgRoot<JS>): Promise<string | null> {
 
 async function transformOldFormat(
   root: SgRoot<JS>,
-  ruleDefinition: { node: SgNode<JS>; style: ExportStyle }
+  ruleDefinition: {
+    node: SgNode<JS>;
+    style: ExportStyle;
+    indirectFuncDecl?: SgNode<JS>;
+    indirectContextName?: string;
+  }
 ): Promise<string> {
-  const { node: ruleDefinitionNode, style } = ruleDefinition;
+  const { node: ruleDefinitionNode, style, indirectFuncDecl, indirectContextName } = ruleDefinition;
 
-  const contextName = getContextParameterName(ruleDefinitionNode);
+  // For indirect exports, resolve contextName from the declared function.
+  const contextName = indirectContextName ?? getContextParameterName(ruleDefinitionNode);
   const isFixable = isRuleFixable(root, contextName);
   const schemaDefinitionNode = getOldFormatSchemaDefinition(root);
   const schemaValue = schemaDefinitionNode ? getSchemaValue(schemaDefinitionNode) : "[]";
@@ -590,7 +667,11 @@ async function transformOldFormat(
   const hasOptions = usesContextOptions(root, contextName);
   const needsSchemaWarning = hasOptions && !schemaDefinitionNode;
 
-  const ruleFunction = getRuleFunction(ruleDefinitionNode, style, contextName);
+  // For indirect exports, use the function declaration text directly as the create value
+  // and remove the standalone declaration so downstream scripts see the body inside create.
+  const ruleFunction = indirectFuncDecl
+    ? indirectFuncDecl.text()
+    : getRuleFunction(ruleDefinitionNode, style, contextName);
   const fixableProperty = isFixable ? '\n    fixable: "code",' : "";
   const schemaComment = needsSchemaWarning
     ? " // TODO: Define schema - this rule uses context.options"
@@ -612,6 +693,13 @@ async function transformOldFormat(
     if (schemaStatement) {
       sourceText = sourceText.replace(schemaStatement.text(), "");
     }
+  }
+
+  // Remove the separate function declaration for indirect exports.
+  // function_declaration at the top level is a direct child of program, so
+  // we remove its text directly rather than using .parent().
+  if (indirectFuncDecl) {
+    sourceText = sourceText.replace(indirectFuncDecl.text(), "");
   }
 
   // Replace rule definition

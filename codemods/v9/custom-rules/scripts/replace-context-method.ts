@@ -194,25 +194,53 @@ function isChainedOffGetSourceCode(callNode: SgNode<JS>): boolean {
   return parent?.kind() === "member_expression";
 }
 
-function getFirstEnclosingFunctionParam(start: SgNode<JS>): string {
+/**
+ * Returns the first param identifier of the immediately enclosing visitor
+ * function, plus whether we need to inject "node" as a parameter because the
+ * visitor was declared with an empty parameter list (e.g. `Program() {}`).
+ *
+ * Unlike the old helper this function STOPS at the first enclosing function
+ * even when that function has no parameters.  The old code walked past an
+ * empty-param visitor and returned the `context` name from `create(context)`,
+ * which produced invalid output such as `contextSourceCode.getScope(context)`.
+ */
+function getFirstEnclosingFunctionInfo(start: SgNode<JS>): {
+  param: string;
+  formalParamsNode: SgNode<JS> | null;
+  needsInjection: boolean;
+} {
   let current: SgNode<JS> | null = start.parent();
   while (current) {
     const kind = current.kind();
     if (
-      kind === "arrow_function" ||
       kind === "function_expression" ||
       kind === "function_declaration" ||
       kind === "method_definition"
     ) {
       const formalParams = current.find({ rule: { kind: "formal_parameters" } });
-      const firstParam = formalParams?.find({ rule: { kind: "identifier" } });
-      if (firstParam) {
-        return firstParam.text();
+      if (formalParams) {
+        const firstParam = formalParams.find({ rule: { kind: "identifier" } });
+        if (firstParam) {
+          return { param: firstParam.text(), formalParamsNode: null, needsInjection: false };
+        }
+        return { param: "node", formalParamsNode: formalParams, needsInjection: true };
       }
+    } else if (kind === "arrow_function") {
+      const formalParams = current.find({ rule: { kind: "formal_parameters" } });
+      if (formalParams) {
+        const firstParam = formalParams.find({ rule: { kind: "identifier" } });
+        if (firstParam) {
+          return { param: firstParam.text(), formalParamsNode: null, needsInjection: false };
+        }
+        return { param: "node", formalParamsNode: formalParams, needsInjection: true };
+      }
+      // Arrow with a single identifier param: `node => {}` — param exists, no injection needed.
+      // Stop here so we don't climb to create(context).
+      return { param: "node", formalParamsNode: null, needsInjection: false };
     }
     current = current.parent();
   }
-  return "node";
+  return { param: "node", formalParamsNode: null, needsInjection: false };
 }
 
 function getCallExpressionListArgs(argsNode: SgNode<JS> | null | undefined): SgNode<JS>[] {
@@ -345,7 +373,14 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
     },
   });
   const newRootEdits: Edit[] = [];
+  // Tracks formal_parameters nodes that need "node" injected, keyed by start index.
+  const pendingParamInjections = new Map<number, SgNode<JS>>();
   let needsContextSourceCode = prependContextSourceCodeConst;
+
+  function scheduleNodeParamInjection(formalParamsNode: SgNode<JS>): void {
+    const key = formalParamsNode.range().start.index;
+    pendingParamInjections.set(key, formalParamsNode);
+  }
 
   for (const expression of expressions) {
     const identifier = expression.getMatch("IDENTIFIER");
@@ -380,7 +415,10 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
           );
         }
       } else {
-        newRootEdits.push(expression.replace(`${context}.${prop} ?? ${context}.${propertyText}()`));
+        // Wrap in parens when the result is chained (e.g. context.getFilename().endsWith(".ts"))
+        const isChained = expression.parent()?.kind() === "member_expression";
+        const replacement = `${context}.${prop} ?? ${context}.${propertyText}()`;
+        newRootEdits.push(expression.replace(isChained ? `(${replacement})` : replacement));
       }
       continue;
     }
@@ -390,10 +428,13 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
         if (propertyText === "getDeclaredVariables") {
           const argsNode = expression.find({ rule: { kind: "arguments" } });
           const args = getCallExpressionListArgs(argsNode as unknown as SgNode<JS>);
-          const param = getFirstEnclosingFunctionParam(expression as unknown as SgNode<JS>);
           if (args.length === 0) {
+            const enclosing = getFirstEnclosingFunctionInfo(expression as unknown as SgNode<JS>);
+            if (enclosing.needsInjection && enclosing.formalParamsNode) {
+              scheduleNodeParamInjection(enclosing.formalParamsNode as unknown as SgNode<JS>);
+            }
             newRootEdits.push(
-              expression.replace(`contextSourceCode.getDeclaredVariables(${param})`)
+              expression.replace(`contextSourceCode.getDeclaredVariables(${enclosing.param})`)
             );
           } else {
             newRootEdits.push(property.replace(CONTEXT_METHOD_MAP[propertyText]!));
@@ -412,24 +453,35 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
         );
         needsContextSourceCode = true;
       } else if (propertyText === "getAncestors") {
-        const param = getFirstEnclosingFunctionParam(expression as unknown as SgNode<JS>);
+        const enclosing = getFirstEnclosingFunctionInfo(expression as unknown as SgNode<JS>);
+        if (enclosing.needsInjection && enclosing.formalParamsNode) {
+          scheduleNodeParamInjection(enclosing.formalParamsNode as unknown as SgNode<JS>);
+        }
         newRootEdits.push(
           expression.replace(
-            `(contextSourceCode.getAncestors ? contextSourceCode.getAncestors(${param}) : ${context}.getAncestors())`
+            `(contextSourceCode.getAncestors ? contextSourceCode.getAncestors(${enclosing.param}) : ${context}.getAncestors())`
           )
         );
         needsContextSourceCode = true;
       } else if (propertyText === "getScope") {
-        const param = getFirstEnclosingFunctionParam(expression as unknown as SgNode<JS>);
-        newRootEdits.push(expression.replace(`contextSourceCode.${propertyText}(${param})`));
+        const enclosing = getFirstEnclosingFunctionInfo(expression as unknown as SgNode<JS>);
+        if (enclosing.needsInjection && enclosing.formalParamsNode) {
+          scheduleNodeParamInjection(enclosing.formalParamsNode as unknown as SgNode<JS>);
+        }
+        newRootEdits.push(
+          expression.replace(`contextSourceCode.${propertyText}(${enclosing.param})`)
+        );
         needsContextSourceCode = true;
       } else if (propertyText === "markVariableAsUsed") {
         const argsNode = expression.find({ rule: { kind: "arguments" } });
         const args = getCallExpressionListArgs(argsNode as unknown as SgNode<JS>);
         const nameArg = args[0]?.text() ?? '"name"';
-        const param = getFirstEnclosingFunctionParam(expression as unknown as SgNode<JS>);
+        const enclosing = getFirstEnclosingFunctionInfo(expression as unknown as SgNode<JS>);
+        if (enclosing.needsInjection && enclosing.formalParamsNode) {
+          scheduleNodeParamInjection(enclosing.formalParamsNode as unknown as SgNode<JS>);
+        }
         newRootEdits.push(
-          expression.replace(`contextSourceCode.markVariableAsUsed(${nameArg}, ${param})`)
+          expression.replace(`contextSourceCode.markVariableAsUsed(${nameArg}, ${enclosing.param})`)
         );
         needsContextSourceCode = true;
       }
@@ -444,6 +496,11 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
         }
       }
     }
+  }
+
+  // Add all pending formal_parameters injections (deduplicated by start index).
+  for (const formalParamsNode of pendingParamInjections.values()) {
+    newRootEdits.push((formalParamsNode as unknown as SgNode<JS>).replace("(node)"));
   }
 
   if (newRootEdits.length === 0 && chainEdits.length === 0) {
