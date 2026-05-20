@@ -560,7 +560,15 @@ function isObjectExported(
     if (callExpr?.kind() === "call_expression") {
       // Use proper AST analysis to verify it's a RuleCreator call
       if (isRuleCreatorCall(callExpr, root)) {
-        return { exported: true, style: "esm", isCreateRule: true };
+        // Only match when the object is the first (or only) argument.
+        // Wrappers like wrapStylisticOrCoreRule('name', { create: ... }) pass the
+        // rule config as the second argument — those must not be treated as exports.
+        const args = parent
+          .children()
+          .filter((c) => c.kind() !== "(" && c.kind() !== ")" && c.kind() !== ",");
+        if (args[0]?.text() === objectNode.text()) {
+          return { exported: true, style: "esm", isCreateRule: true };
+        }
       }
     }
   }
