@@ -1,6 +1,6 @@
-/* exported foo: true, bar: false */
-/* exported foo bar */
-/* eslint semi: ["error", "always"] */
+/* exported foo, bar */
+/* exported foo, bar */
+
 /* eslint semi: ["error", "never"] */
 
 foo(); // valid, because the configuration is "never"

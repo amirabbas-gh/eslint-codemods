@@ -1,4 +1,4 @@
-/* eslint valid-jsdoc: "error" */
+
 
 /**
  * Adds two numbers.
