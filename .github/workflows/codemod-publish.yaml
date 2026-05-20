@@ -99,9 +99,9 @@ jobs:
             if [[ ! -f "$yaml_file" ]]; then
               continue
             fi
-            
+
             echo "Checking: $yaml_file"
-            
+
             # Extract name from yaml file using yq or basic grep/sed
             # First try with yq if available, otherwise use grep/sed
             if command -v yq >/dev/null 2>&1; then
@@ -112,7 +112,7 @@ jobs:
               YAML_NAME=$(grep -E '^[[:space:]]*name[[:space:]]*:' "$yaml_file" | head -1 | sed 's/^[[:space:]]*name[[:space:]]*:[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/^["\x27]//' | sed 's/["\x27]$//' || echo "")
               YAML_VERSION=$(grep -E '^[[:space:]]*version[[:space:]]*:' "$yaml_file" | head -1 | sed 's/^[[:space:]]*version[[:space:]]*:[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/^["\x27]//' | sed 's/["\x27]$//' || echo "")
             fi
-            
+
             echo "  - Name in file: '$YAML_NAME'"
             echo "  - Version in file: '$YAML_VERSION'"
 
@@ -159,48 +159,35 @@ jobs:
 
           echo "✅ codemod.yaml found"
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.nvmrc'
+          cache: pnpm
 
-      - name: Install project dependencies
-        run: |
-          npm install --no-frozen-lockfile
-          npm install -g codemod@latest
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       # Run test before login to not waste time if it fails
       - name: Validate workflow
         working-directory: ${{ steps.find-codemod.outputs.codemod-path }}
-        run: npx codemod@latest workflow validate --workflow workflow.yaml
+        run: pnpm dlx codemod@latest workflow validate --workflow workflow.yaml
 
-      - name: Check if package.json exists
-        id: check-package-json
+      - name: Run codemod tests
         working-directory: ${{ steps.find-codemod.outputs.codemod-path }}
-        run: |
-          if [[ -f "package.json" ]]; then
-            echo "has-package-json=true" >> $GITHUB_OUTPUT
-          else
-            echo "has-package-json=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install dependencies
-        if: steps.check-package-json.outputs.has-package-json == 'true'
-        working-directory: ${{ steps.find-codemod.outputs.codemod-path }}
-        run: npm install --no-frozen-lockfile
-
-      - name: Run javascript ast-grep codemod Tests
-        if: steps.check-package-json.outputs.has-package-json == 'true'
-        working-directory: ${{ steps.find-codemod.outputs.codemod-path }}
-        run: npm test
+        run: pnpm test
 
       - name: Authenticate with Codemod registry
         env:
           CODEMOD_API_KEY: ${{ secrets.CODEMOD_API_KEY }}
-        run: npx codemod@latest login --api-key "$CODEMOD_API_KEY"
+        run: pnpm dlx codemod@latest login --api-key "$CODEMOD_API_KEY"
 
       - name: Publish codemod
         working-directory: ${{ steps.find-codemod.outputs.codemod-path }}
-        run: npx codemod@latest publish
+        run: pnpm dlx codemod@latest publish
 
       - name: Create release summary
         env:

@@ -4,23 +4,32 @@
   "version": "0.1.0",
   "description": "Codemods for ESLint",
   "type": "module",
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "test": "pnpm -r test",
+    "check-types": "pnpm -r check-types",
+    "ci": "pnpm run test && pnpm run check-types",
+    "docs:links": "markdown-link-check README.md CONTRIBUTING.md",
+    "prepare": "husky"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome"
+    ]
   },
   "devDependencies": {
-    "@eslint/js": "^9.15.0",
-    "@typescript-eslint/eslint-plugin": "^8.14.0",
-    "@typescript-eslint/parser": "^8.14.0",
-    "eslint": "^9.15.0",
-    "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
-  },
-  "dependencies": {
-    "@types/yaml": "^1.9.6"
+    "@biomejs/biome": "^1.9.4",
+    "codemod": "^1.11.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
+    "markdown-link-check": "^3.13.6",
+    "typescript": "^5.8.3"
   }
 }
