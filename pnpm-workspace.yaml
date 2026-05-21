@@ -1,5 +1,7 @@
 packages:
   - 'codemods/**'
+  - '!codemods/**/tests/**'
+  - '!codemods/**/tmp/**'
 
 catalog:
   "@codemod.com/jssg-types": "^1.5.1"
