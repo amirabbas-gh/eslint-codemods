@@ -6,7 +6,9 @@ function excludeLockfiles(files) {
 }
 
 export default {
-  '*.{ts,tsx,js,jsx,mts,mjs}': ['oxfmt --write', 'oxlint --type-aware --type-check --fix'],
+  '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}': 'oxfmt --write',
+  '*.{js,mjs,cjs,jsx}': 'oxlint --fix',
+  '*.{ts,mts,cts,tsx}': 'oxlint --type-aware --type-check --fix',
   /** @param {string[]} files */
   '*.{json,yaml,yml}': (files) => {
     const filtered = excludeLockfiles(files)
