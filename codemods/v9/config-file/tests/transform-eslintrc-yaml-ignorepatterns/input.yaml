@@ -1,5 +1,0 @@
-ignorePatterns:
-  - dist
-  - coverage/**
-rules:
-  no-console: off

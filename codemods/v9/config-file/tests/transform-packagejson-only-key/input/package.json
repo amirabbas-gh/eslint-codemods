@@ -1,7 +1,0 @@
-{
-  "eslintConfig": {
-    "rules": {
-      "no-console": "warn"
-    }
-  }
-}
