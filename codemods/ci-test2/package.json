@@ -1,6 +1,6 @@
 {
   "name": "ci-test2",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Transform legacy code patterns",
   "type": "module",
   "scripts": {
