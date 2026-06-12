@@ -21,6 +21,8 @@ const codemod: Codemod<JSOrTS> = async (root) => {
     },
   })
 
+  console.log('test')
+
   const edits = nodes.map((node) => {
     const varName = node.getMatch('VAR')?.text()
     const value = node.getMatch('VALUE')?.text()
