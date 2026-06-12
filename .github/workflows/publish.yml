@@ -1,18 +1,85 @@
-name: Publish Codemod (Manual)
+name: Publish
+
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       codemod_name:
-        description: "Codemod name (directory name under codemods/)"
+        description: 'Codemod name (directory name under codemods/)'
         required: true
         type: string
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
+  tag:
+    name: Tag released versions
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      changed_dirs: ${{ steps.tag.outputs.changed_dirs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detect pending changesets
+        id: pending
+        run: |
+          count="$(find .changeset -maxdepth 1 -type f -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Tag released versions
+        if: steps.pending.outputs.count == '0'
+        id: tag
+        run: bash scripts/tag-and-publish.sh
+
   publish:
+    name: Publish ${{ matrix.dir }}
+    needs: tag
+    if: >-
+      github.event_name == 'push' &&
+      needs.tag.outputs.changed_dirs != '' &&
+      needs.tag.outputs.changed_dirs != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: ${{ fromJson(needs.tag.outputs.changed_dirs) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Publish codemod
+        uses: codemod/publish-action@v1
+        with:
+          path: ${{ matrix.dir }}
+
+  publish-manual:
+    name: Publish codemod (manual)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
