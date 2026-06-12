@@ -54,6 +54,15 @@ importers:
         specifier: ^5.8.3
         version: 5.9.2
 
+  codemods/ci-test:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: 'catalog:'
+        version: 1.6.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.2
+
   codemods/v10/config:
     devDependencies:
       '@codemod.com/jssg-types':

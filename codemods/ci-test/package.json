@@ -1,0 +1,14 @@
+{
+  "name": "ci-test",
+  "version": "0.1.0",
+  "description": "Transform legacy code patterns",
+  "type": "module",
+  "scripts": {
+    "test": "codemod jssg test -l typescript ./scripts/codemod.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "catalog:",
+    "typescript": "catalog:"
+  }
+}
