@@ -8,6 +8,7 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
 
   const fileJsdocs: SgNode<JS>[] = rootNode.findAll({
     rule: {
+      
       kind: 'comment',
       any: [
         {
