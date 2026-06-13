@@ -33,7 +33,7 @@ jobs:
         run: |
           changed_paths=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
 
-          if echo "$changed_paths" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/ci\.yaml)$'; then
+          if echo "$changed_paths" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/ci\.yml)$'; then
             pnpm test
             exit 0
           fi
@@ -41,9 +41,9 @@ jobs:
           filters=$(
             echo "$changed_paths" \
               | grep '^codemods/' \
-              | cut -d/ -f2 \
+              | cut -d/ -f1-3 \
               | sort -u \
-              | sed 's/^/--filter /'
+              | sed 's|^|--filter ./|'
           )
 
           if [ -z "$filters" ]; then
@@ -51,4 +51,5 @@ jobs:
             exit 0
           fi
 
-          pnpm test $filters
+          # shellcheck disable=SC2086
+          pnpm $filters test
