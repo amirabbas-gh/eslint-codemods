@@ -22,7 +22,7 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
     },
   })
 
-  let doesJsDocCommentExist = true
+  let doesJsDocCommentExist = false
 
   for (const fileJsdoc of fileJsdocs) {
     doesJsDocCommentExist = true
