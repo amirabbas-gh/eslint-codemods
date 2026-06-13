@@ -8,7 +8,6 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
 
   const fileJsdocs: SgNode<JS>[] = rootNode.findAll({
     rule: {
-      
       kind: 'comment',
       any: [
         {
@@ -23,7 +22,7 @@ export default async function transform(root: SgRoot<JS>): Promise<string | null
     },
   })
 
-  let doesJsDocCommentExist = false
+  let doesJsDocCommentExist = true
 
   for (const fileJsdoc of fileJsdocs) {
     doesJsDocCommentExist = true
