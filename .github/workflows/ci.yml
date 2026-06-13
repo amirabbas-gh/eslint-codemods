@@ -5,22 +5,50 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
+  ci:
+    name: CI
+    runs-on: ubuntu-slim
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm check-types
+      - run: pnpm run format:check
 
-      - run: pnpm test
+      - run: pnpm run lint
+
+      - run: pnpm run check-types
+
+      - name: Run tests for changed codemods
+        shell: bash
+        run: |
+          changed_paths=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+
+          if echo "$changed_paths" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/ci\.yaml)$'; then
+            pnpm test
+            exit 0
+          fi
+
+          filters=$(
+            echo "$changed_paths" \
+              | grep '^codemods/' \
+              | cut -d/ -f2 \
+              | sort -u \
+              | sed 's/^/--filter /'
+          )
+
+          if [ -z "$filters" ]; then
+            echo "No codemod packages affected; skipping tests."
+            exit 0
+          fi
+
+          pnpm test $filters
